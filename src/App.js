@@ -4,8 +4,9 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 
 // Firebase設定のグローバル変数（Canvas環境から提供）
+// Netlifyのような公開環境ではこれらの変数は定義されないため、undefinedチェックを追加します。
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? initialAuthToken : null;
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // 紙吹雪アニメーションのヘルパー関数
@@ -268,6 +269,16 @@ const App = () => {
   // Firebaseの初期化と認証
   useEffect(() => {
     try {
+      // firebaseConfigが存在しない場合（Netlifyなど）は初期化をスキップ
+      if (Object.keys(firebaseConfig).length === 0) {
+        console.warn("Firebase config not found. Skipping Firebase initialization.");
+        setFirebaseLoading(false);
+        setIsAuthReady(true);
+        setUserId(crypto.randomUUID()); // 匿名ユーザーIDを生成
+        setLoadingQuestions(false);
+        return;
+      }
+
       const app = initializeApp(firebaseConfig);
       const authInstance = getAuth(app);
       setAuth(authInstance);
@@ -285,7 +296,7 @@ const App = () => {
             }
           } catch (error) {
             console.error("Firebase authentication failed:", error);
-            setUserId(crypto.randomUUID());
+            setUserId(crypto.randomUUID()); // エラー時も匿名IDを生成
           }
         }
         setIsAuthReady(true);
